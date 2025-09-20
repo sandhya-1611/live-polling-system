@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 
 const TeacherDashboard = ({ onBack }) => {
   const [socket, setSocket] = useState(null);
-  const [question, setQuestion] = useState('Rahul Bajaj');
-  const [options, setOptions] = useState(['Rahul Bajaj', 'Rahul Bajaj']);
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState(['', '']);
+  const [correctAnswers, setCorrectAnswers] = useState([true, false]); 
   const [timeLimit, setTimeLimit] = useState(60);
   const [currentPoll, setCurrentPoll] = useState(null);
   const [students, setStudents] = useState([]);
@@ -12,18 +13,18 @@ const TeacherDashboard = ({ onBack }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [pollHistory, setPollHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [correctAnswers, setCorrectAnswers] = useState([0]);
+  const [showChat, setShowChat] = useState(false);
+  
+  const currentPollQuestionRef = useRef('');
 
   useEffect(() => {
-    // Initialize socket connection
     const newSocket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000');
     setSocket(newSocket);
 
-    // Join as teacher
     newSocket.emit('join', { role: 'teacher' });
 
-    // Socket event listeners
     newSocket.on('connect', () => {
       setIsConnected(true);
     });
@@ -60,8 +61,9 @@ const TeacherDashboard = ({ onBack }) => {
     newSocket.on('poll_completed', (results) => {
       setPollResults(results);
       setShowResults(true);
-      setCurrentPoll(null);
       setTimeLeft(0);
+      setCurrentPoll(null);
+      currentPollQuestionRef.current = ''; 
     });
 
     newSocket.on('time_update', (time) => {
@@ -73,23 +75,50 @@ const TeacherDashboard = ({ onBack }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (pollResults.length > 0 && currentPollQuestionRef.current && showResults) {
+      setPollHistory(prev => {
+        const exists = prev.some(poll => 
+          poll.question === currentPollQuestionRef.current && 
+          poll.results.length === pollResults.length
+        );
+        
+        if (!exists) {
+          return [...prev, {
+            id: Date.now(),
+            question: currentPollQuestionRef.current,
+            results: pollResults,
+            endedAt: new Date()
+          }];
+        }
+        return prev;
+      });
+    }
+  }, [pollResults, showResults]);
+
   const handleOptionChange = (index, value) => {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
   };
 
+  const handleCorrectAnswerChange = (index, isCorrect) => {
+    const newCorrectAnswers = [...correctAnswers];
+    newCorrectAnswers[index] = isCorrect;
+    setCorrectAnswers(newCorrectAnswers);
+  };
+
   const addOption = () => {
     if (options.length < 6) {
       setOptions([...options, '']);
+      setCorrectAnswers([...correctAnswers, false]); 
     }
   };
 
-  const toggleCorrectAnswer = (index) => {
-    if (correctAnswers.includes(index)) {
-      setCorrectAnswers(correctAnswers.filter(i => i !== index));
-    } else {
-      setCorrectAnswers([...correctAnswers, index]);
+  const removeOption = (index) => {
+    if (options.length > 2) {
+      setOptions(options.filter((_, i) => i !== index));
+      setCorrectAnswers(correctAnswers.filter((_, i) => i !== index));
     }
   };
 
@@ -106,242 +135,457 @@ const TeacherDashboard = ({ onBack }) => {
     }
 
     if (socket) {
-      socket.emit('create_poll', {
-        question: question.trim(),
-        options: validOptions,
-        timeLimit: timeLimit,
-        correctAnswers: correctAnswers
-      });
-      
-      setCurrentPoll({
+      const pollData = {
         question: question.trim(),
         options: validOptions,
         timeLimit: timeLimit
-      });
+      };
+      
+      currentPollQuestionRef.current = question.trim();
+      
+      socket.emit('create_poll', pollData);
+      
+      setCurrentPoll(pollData);
       setTimeLeft(timeLimit);
       setShowResults(false);
       setPollResults([]);
     }
   };
 
+  const canCreateNewPoll = !currentPoll || (currentPoll && students.every(s => s.answered));
+
   if (!isConnected) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7765DA] mx-auto mb-4"></div>
-          <p className="text-[#6E6E6E]">Connecting to server...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" 
+               style={{ borderColor: '#7765DA' }}></div>
+          <p style={{ color: '#6E6E6E' }}>Connecting to server...</p>
         </div>
       </div>
     );
   }
 
+  const ResultsChart = ({ results, question }) => (
+    <div className="bg-white rounded-lg border mb-6" style={{ borderColor: '#F2F2F2' }}>
+      <div className="bg-gray-600 text-white p-4 rounded-t-lg">
+        <h3 className="font-medium">{question}</h3>
+      </div>
+      
+      <div className="p-6 space-y-4">
+        {results.map((result, index) => {
+          const percentage = results.reduce((sum, r) => sum + r.count, 0) > 0 
+            ? (result.count / results.reduce((sum, r) => sum + r.count, 0)) * 100 
+            : 0;
+          
+          return (
+            <div key={index} className="relative rounded-lg border overflow-hidden" style={{ borderColor: '#F2F2F2', height: '60px' }}>
+              <div 
+                className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
+                style={{ 
+                  width: `${percentage}%`,
+                  background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+                }}
+              ></div>
+              
+              <div className="relative z-10 flex items-center justify-between h-full px-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-sm font-bold"
+                       style={{ color: '#7765DA' }}>
+                    {index + 1}
+                  </div>
+                  <span className="font-medium text-white">
+                    {result.option}
+                  </span>
+                </div>
+                <span className="font-bold text-lg text-white">
+                  {percentage.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto px-8 py-12">
-        {/* Purple Badge */}
-        <div className="mb-8">
-          <div className="inline-flex bg-gradient-to-r from-[#7765DA] to-[#5767D0] text-white px-4 py-2 rounded-full text-sm font-medium items-center space-x-2">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
-            </svg>
-            <span>Intervue Poll</span>
-          </div>
-        </div>
-
-        {/* Main Title */}
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold text-black mb-6 leading-tight">
-            Let's Get Started
-          </h1>
-          <p className="text-[#6E6E6E] text-xl leading-relaxed">
-            you'll have the ability to create and manage polls, ask questions, and monitor<br />
-            your students' responses in real-time.
-          </p>
-        </div>
-
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          {/* Left Column */}
-          <div className="space-y-8">
-            {/* Enter your question */}
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-black">Enter your question</h2>
-                <div className="relative">
-                  <select
-                    value={timeLimit}
-                    onChange={(e) => setTimeLimit(Number(e.target.value))}
-                    className="appearance-none bg-[#F5F5F5] px-4 py-2 pr-10 rounded-lg text-black border-0 focus:outline-none focus:ring-2 focus:ring-[#7765DA] cursor-pointer"
-                  >
-                    <option value={30}>30 seconds</option>
-                    <option value={60}>60 seconds</option>
-                    <option value={120}>2 minutes</option>
-                    <option value={300}>5 minutes</option>
-                  </select>
-                  <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-black pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-
-              <div className="relative">
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  className="w-full h-40 p-6 bg-[#F5F5F5] rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7765DA] resize-none text-black text-lg"
-                  placeholder="Enter your question here..."
-                />
-                <div className="absolute bottom-4 right-4 text-sm text-[#999999]">
-                  0/100
-                </div>
+      <div className="border-b" style={{ borderColor: '#F2F2F2' }}>
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white" 
+                   style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}>
+                <span className="w-2 h-2 bg-white rounded-full mr-2"></span>
+                Interval Poll
               </div>
             </div>
-
-            {/* Edit Options */}
-            <div>
-              <h2 className="text-xl font-semibold text-black mb-6">Edit Options</h2>
-              <div className="space-y-4">
-                {options.map((option, index) => (
-                  <div key={index} className="flex items-center space-x-4">
-                    <div className="w-8 h-8 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                      {index + 1}
-                    </div>
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => handleOptionChange(index, e.target.value)}
-                      className="flex-1 p-4 bg-[#F5F5F5] rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7765DA] text-black text-lg"
-                      placeholder={`Enter option ${index + 1}`}
-                    />
-                  </div>
-                ))}
-              </div>
-
+            {(showResults || showHistory) && (
               <button
-                onClick={addOption}
-                className="mt-6 px-6 py-3 border-2 border-[#7765DA] text-[#7765DA] rounded-xl hover:bg-[#7765DA] hover:text-white transition-all duration-200 font-medium text-sm"
+                onClick={() => setShowHistory(!showHistory)}
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-full font-medium"
+                style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
               >
-                + Add More option
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                View Poll history
               </button>
-            </div>
+            )}
           </div>
+        </div>
+      </div>
 
-          {/* Right Column */}
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        {showHistory && (
           <div>
-            <h2 className="text-xl font-semibold text-black mb-6">Is it Correct?</h2>
-            <div className="space-y-6">
-              {options.map((option, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-black font-medium text-lg">
-                    {correctAnswers.includes(index) ? 'Yes' : 'No'}
-                  </span>
-                  <div className="flex space-x-6">
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <div 
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          correctAnswers.includes(index) 
-                            ? 'border-[#7765DA] bg-[#7765DA]' 
-                            : 'border-[#CCCCCC] bg-white'
-                        }`}
-                        onClick={() => {
-                          if (!correctAnswers.includes(index)) {
-                            toggleCorrectAnswer(index);
-                          }
-                        }}
-                      >
-                        {correctAnswers.includes(index) && (
-                          <div className="w-3 h-3 bg-white rounded-full"></div>
-                        )}
-                      </div>
-                      <span className="text-black font-medium">Yes</span>
-                    </label>
-                    <label className="flex items-center space-x-3 cursor-pointer">
-                      <div 
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          !correctAnswers.includes(index) 
-                            ? 'border-[#7765DA] bg-[#7765DA]' 
-                            : 'border-[#CCCCCC] bg-white'
-                        }`}
-                        onClick={() => {
-                          if (correctAnswers.includes(index)) {
-                            toggleCorrectAnswer(index);
-                          }
-                        }}
-                      >
-                        {!correctAnswers.includes(index) && (
-                          <div className="w-3 h-3 bg-white rounded-full"></div>
-                        )}
-                      </div>
-                      <span className="text-black font-medium">No</span>
-                    </label>
+            <h1 className="text-3xl font-bold mb-8" style={{ color: '#373737' }}>
+              View Poll History
+            </h1>
+            
+            <div className="space-y-8">
+              {pollHistory.map((poll, index) => (
+                <div key={poll.id}>
+                  <h2 className="text-xl font-semibold mb-4" style={{ color: '#373737' }}>
+                    Question {index + 1}
+                  </h2>
+                  
+                  <div className="bg-white rounded-lg border-2" style={{ borderColor: '#7765DA' }}>
+                    <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+                      <h3 className="font-medium">{poll.question}</h3>
+                    </div>
+                    
+                    <div className="p-6 space-y-4">
+                      {poll.results.map((result, resultIndex) => {
+                        const percentage = poll.results.reduce((sum, r) => sum + r.count, 0) > 0 
+                          ? (result.count / poll.results.reduce((sum, r) => sum + r.count, 0)) * 100 
+                          : 0;
+                        
+                        return (
+                          <div key={resultIndex} className="relative rounded-lg border overflow-hidden" style={{ borderColor: '#F2F2F2', height: '60px' }}>
+                            <div 
+                              className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
+                              style={{ 
+                                width: `${percentage}%`,
+                                background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+                              }}
+                            ></div>
+                            
+                            <div className="relative z-10 flex items-center justify-between h-full px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-sm font-bold"
+                                     style={{ color: '#7765DA' }}>
+                                  {resultIndex + 1}
+                                </div>
+                                <span className={`font-medium ${percentage > 0 ? 'text-white' : ''}`}
+                                      style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
+                                  {result.option}
+                                </span>
+                              </div>
+                              <span className={`font-bold text-lg ${percentage > 0 ? 'text-white' : ''}`}
+                                    style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
+                                {percentage.toFixed(0)}%
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Bottom section with Ask Question button */}
-        <div className="mt-16 flex justify-end">
-          <button
-            onClick={handleCreatePoll}
-            className="px-12 py-4 bg-gradient-to-r from-[#7765DA] via-[#5767D0] to-[#4F0DCE] text-white rounded-full font-semibold text-lg hover:from-[#6654C9] hover:via-[#4656BF] hover:to-[#3E0CBD] transition-all duration-200 shadow-lg hover:shadow-xl"
-          >
-            Ask Question
-          </button>
-        </div>
+        {!currentPoll && !showResults && !showHistory && (
+          <div>
 
-        {/* Current Poll Status (if active) */}
-        {currentPoll && (
-          <div className="mt-12 bg-[#F5F5F5] rounded-xl p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-black">Current Poll Active</h3>
-              <span className="text-[#6E6E6E]">
-                {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')} remaining
-              </span>
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-3" style={{ color: '#373737' }}>
+                Let's Get Started
+              </h1>
+              <p style={{ color: '#6E6E6E' }}>
+                you'll have the ability to create and manage polls, ask questions, and monitor 
+                your students' responses in real-time.
+              </p>
             </div>
-            <div className="bg-[#E0E0E0] rounded-full h-2 mb-4">
-              <div 
-                className="bg-gradient-to-r from-[#7765DA] to-[#5767D0] h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${(timeLeft / currentPoll.timeLimit) * 100}%` }}
-              ></div>
+
+            <div className="mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-lg font-semibold" style={{ color: '#373737' }}>
+                  Enter your question
+                </label>
+                <select
+                  value={timeLimit}
+                  onChange={(e) => setTimeLimit(Number(e.target.value))}
+                  className="px-4 py-2 border rounded-lg"
+                  style={{ borderColor: '#F2F2F2', color: '#373737', backgroundColor: 'white' }}
+                >
+                  <option value={10}>10 seconds</option>
+                  <option value={20}>20 seconds</option>
+                  <option value={30}>30 seconds</option>
+                  <option value={60}>60 seconds</option>
+                </select>
+              </div>
+              
+              <div className="relative">
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="Enter your question here..."
+                  className="w-full p-4 border-0 rounded-xl resize-none focus:outline-none"
+                  style={{ 
+                    backgroundColor: '#F2F2F2',
+                    color: '#373737'
+                  }}
+                  rows={4}
+                />
+                <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                  <span className="text-sm px-3 py-1 rounded-full text-white"
+                        style={{ backgroundColor: '#6E6E6E' }}>
+                    {question.length}/100
+                  </span>
+                </div>
+              </div>
             </div>
-            <p className="text-black font-medium">{currentPoll.question}</p>
-            <p className="text-sm text-[#6E6E6E] mt-2">
-              Responses: {students.filter(s => s.answered).length} / {students.length}
-            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: '#373737' }}>
+                  Edit Options
+                </h3>
+                <div className="space-y-3">
+                  {options.map((option, index) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                           style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}>
+                        {index + 1}
+                      </div>
+                      <input
+                        type="text"
+                        value={option}
+                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                        className="flex-1 p-3 border-0 rounded-lg focus:outline-none"
+                        style={{ 
+                          backgroundColor: '#F2F2F2',
+                          color: '#373737'
+                        }}
+                        placeholder={`Option ${index + 1}`}
+                      />
+                      {options.length > 2 && (
+                        <button
+                          onClick={() => removeOption(index)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 text-xl"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {options.length < 6 && (
+                  <button
+                    onClick={addOption}
+                    className="mt-4 px-4 py-2 text-sm font-medium border rounded-lg"
+                    style={{ 
+                      color: '#7765DA',
+                      borderColor: '#7765DA',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    + Add More option
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: '#373737' }}>
+                  Is it Correct?
+                </h3>
+                <div className="space-y-3">
+                  {options.map((option, index) => (
+                    <div key={index} className="flex items-center justify-between h-12">
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                               style={{ borderColor: correctAnswers[index] === true ? '#7765DA' : '#6E6E6E' }}>
+                            {correctAnswers[index] === true && (
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#7765DA' }}></div>
+                            )}
+                          </div>
+                          <span style={{ color: '#373737' }}>Yes</span>
+                          <input
+                            type="radio"
+                            name={`correct-${index}`}
+                            checked={correctAnswers[index] === true}
+                            onChange={() => handleCorrectAnswerChange(index, true)}
+                            className="hidden"
+                          />
+                        </label>
+                        
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center"
+                               style={{ borderColor: correctAnswers[index] === false ? '#7765DA' : '#6E6E6E' }}>
+                            {correctAnswers[index] === false && (
+                              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#7765DA' }}></div>
+                            )}
+                          </div>
+                          <span style={{ color: '#373737' }}>No</span>
+                          <input
+                            type="radio"
+                            name={`correct-${index}`}
+                            checked={correctAnswers[index] === false}
+                            onChange={() => handleCorrectAnswerChange(index, false)}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex justify-end">
+              <button
+                onClick={handleCreatePoll}
+                disabled={!canCreateNewPoll}
+                className="px-8 py-3 text-white font-semibold rounded-full transition-all"
+                style={{ 
+                  background: canCreateNewPoll 
+                    ? 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' 
+                    : '#6E6E6E'
+                }}
+              >
+                Ask Question
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Poll Results */}
-        {showResults && pollResults.length > 0 && (
-          <div className="mt-8 bg-[#F5F5F5] rounded-xl p-6">
-            <h3 className="text-lg font-semibold text-black mb-4">Poll Results</h3>
-            <div className="space-y-4">
-              {pollResults.map((result, index) => {
-                const percentage = pollResults.reduce((sum, r) => sum + r.count, 0) > 0 
-                  ? (result.count / pollResults.reduce((sum, r) => sum + r.count, 0)) * 100 
-                  : 0;
-                
-                return (
-                  <div key={index}>
-                    <div className="flex justify-between mb-2">
-                      <span className="font-medium text-black">{result.option}</span>
-                      <span className="text-[#6E6E6E]">{result.count} votes ({percentage.toFixed(1)}%)</span>
-                    </div>
-                    <div className="w-full bg-[#E0E0E0] rounded-full h-3">
+        {showResults && !showHistory && pollResults.length > 0 && (
+          <div>
+            <h1 className="text-3xl font-bold mb-8" style={{ color: '#373737' }}>
+              Question
+            </h1>
+            
+            <div className="bg-white rounded-lg border-2 mb-6" style={{ borderColor: '#7765DA' }}>
+              <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+                <h3 className="font-medium">{question || currentPoll?.question}</h3>
+              </div>
+              
+              <div className="p-6 space-y-4">
+                {pollResults.map((result, index) => {
+                  const percentage = pollResults.reduce((sum, r) => sum + r.count, 0) > 0 
+                    ? (result.count / pollResults.reduce((sum, r) => sum + r.count, 0)) * 100 
+                    : 0;
+                  
+                  return (
+                    <div key={index} className="relative rounded-lg border overflow-hidden" style={{ borderColor: '#F2F2F2', height: '60px' }}>
+
                       <div 
-                        className="bg-gradient-to-r from-[#7765DA] to-[#5767D0] h-3 rounded-full transition-all duration-500"
-                        style={{ width: `${percentage}%` }}
+                        className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
+                        style={{ 
+                          width: `${percentage}%`,
+                          background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+                        }}
                       ></div>
+                      
+                      {/* Content overlay */}
+                      <div className="relative z-10 flex items-center justify-between h-full px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-sm font-bold"
+                               style={{ color: '#7765DA' }}>
+                            {index + 1}
+                          </div>
+                          <span className={`font-medium ${percentage > 0 ? 'text-white' : ''}`}
+                                style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
+                            {result.option}
+                          </span>
+                        </div>
+                        <span className={`font-bold text-lg ${percentage > 0 ? 'text-white' : ''}`}
+                              style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
+                          {percentage.toFixed(0)}%
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="flex justify-end">
+              <button
+                onClick={() => {
+                  setShowResults(false);
+                  setCurrentPoll(null);
+                  setQuestion('');
+                  setOptions(['', '']);
+                }}
+                className="px-8 py-4 text-white font-semibold rounded-full"
+                style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
+              >
+                + Ask a new question
+              </button>
             </div>
           </div>
         )}
       </div>
+
+      <button
+        onClick={() => setShowChat(!showChat)}
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg"
+        style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+        </svg>
+      </button>
+
+      {showChat && (
+        <div className="fixed bottom-24 right-6 w-80 bg-white rounded-xl border shadow-lg p-6" style={{ borderColor: '#F2F2F2' }}>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-semibold" style={{ color: '#373737' }}>Participants</h3>
+            <span className="text-sm" style={{ color: '#6E6E6E' }}>
+              {students.length} users
+            </span>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold" style={{ color: '#373737' }}>Name</span>
+              <span className="font-semibold" style={{ color: '#373737' }}>Action</span>
+            </div>
+            
+            {students.map((student, index) => (
+              <div key={index} className="flex justify-between items-center py-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                       style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}>
+                    {student.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ color: '#373737' }}>{student.name}</span>
+                </div>
+                <button 
+                  className="text-sm font-medium"
+                  style={{ color: '#7765DA' }}
+                  onClick={() => {
+                    if (socket) {
+                      socket.emit('remove_student', student.name);
+                    }
+                  }}
+                >
+                  Kick out
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
