@@ -1,113 +1,85 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState } from 'react';
 
-const WelcomePage = () => {
-  const [selectedRole, setSelectedRole] = useState("student");
-  const navigate = useNavigate();
+const Welcome = ({ onRoleSelect }) => {
+  const [selectedRole, setSelectedRole] = useState('student');
 
   const handleRoleSelect = (role) => {
     setSelectedRole(role);
   };
 
   const handleContinue = () => {
-    if (selectedRole === "teacher") {
-      navigate("/teacher");
-    } else if (selectedRole === "student") {
-      navigate("/student"); // later when you add StudentDashboard
-    } else {
-      alert("Please select a role!");
+    if (selectedRole && onRoleSelect) {
+      onRoleSelect(selectedRole);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{
-      background: 'linear-gradient(135deg, #F2F2F2 0%, #E8E8E8 100%)'
-    }}>
-      <div className="w-full max-w-2xl mx-auto px-6">
-        {/* Header with Logo */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center px-4 py-2 rounded-lg mb-6" style={{
-            background: 'linear-gradient(135deg, #7765DA 0%, #5767D0 50%, #4F0DCE 100%)'
-          }}>
-            <div className="w-5 h-5 mr-2">
-              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="white"/>
-                <path d="M19 15L19.68 17.32L22 18L19.68 18.68L19 21L18.32 18.68L16 18L18.32 17.32L19 15Z" fill="white"/>
-                <path d="M5 15L5.68 17.32L8 18L5.68 18.68L5 21L4.32 18.68L2 18L4.32 17.32L5 15Z" fill="white"/>
-              </svg>
-            </div>
-            <span className="text-white font-medium">Intervue Poll</span>
+    <div className="min-h-screen bg-[#F2F2F2] flex items-center justify-center p-4">
+      <div className="max-w-2xl w-full">
+        {/* Purple Badge */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-gradient-to-r from-[#7765DA] to-[#5767D0] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
+            </svg>
+            <span>Intervue Poll</span>
           </div>
-          
-          <h1 className="text-4xl font-bold mb-4" style={{ color: '#373737' }}>
-            Welcome to the <span style={{ color: '#373737' }}>Live Polling System</span>
+        </div>
+
+        {/* Main Content */}
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-[#373737] mb-6">
+            Welcome to the <span className="text-[#373737]">Live Polling System</span>
           </h1>
-          
-          <p className="text-lg" style={{ color: '#6E6E6E' }}>
-            Please select the role that best describes you to begin using the live polling system
+          <p className="text-[#6E6E6E] text-xl leading-relaxed">
+            Please select the role that best describes you to begin using the live polling<br />
+            system
           </p>
         </div>
 
         {/* Role Selection Cards */}
-        <div className="flex flex-col md:flex-row gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 max-w-4xl mx-auto">
           {/* Student Card */}
           <div 
-            className={`flex-1 p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
-              selectedRole === 'student' 
-                ? 'border-2' 
-                : 'border border-gray-200 hover:border-gray-300'
-            }`}
-            style={{
-              backgroundColor: 'white',
-              borderColor: selectedRole === 'student' ? '#7765DA' : '#E5E7EB'
-            }}
             onClick={() => handleRoleSelect('student')}
+            className={`bg-white rounded-2xl border-3 p-8 cursor-pointer transition-all duration-200 ${
+              selectedRole === 'student' 
+                ? 'border-[#7765DA]' 
+                : 'border-[#E5E5E5] hover:border-[#7765DA]'
+            }`}
           >
-            <h3 className="text-xl font-semibold mb-3" style={{ color: '#373737' }}>
+            <h3 className="text-2xl font-bold text-[#373737] mb-4">
               I'm a Student
             </h3>
-            <p style={{ color: '#6E6E6E' }}>
+            <p className="text-[#6E6E6E] text-base leading-relaxed">
               Lorem Ipsum is simply dummy text of the printing and typesetting industry
             </p>
           </div>
 
           {/* Teacher Card */}
           <div 
-            className={`flex-1 p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
-              selectedRole === 'teacher' 
-                ? 'border-2' 
-                : 'border border-gray-200 hover:border-gray-300'
-            }`}
-            style={{
-              backgroundColor: 'white',
-              borderColor: selectedRole === 'teacher' ? '#7765DA' : '#E5E7EB'
-            }}
             onClick={() => handleRoleSelect('teacher')}
+            className={`bg-white rounded-2xl border-3 p-8 cursor-pointer transition-all duration-200 ${
+              selectedRole === 'teacher' 
+                ? 'border-[#7765DA]' 
+                : 'border-[#E5E5E5] hover:border-[#7765DA]'
+            }`}
           >
-            <h3 className="text-xl font-semibold mb-3" style={{ color: '#373737' }}>
+            <h3 className="text-2xl font-bold text-[#373737] mb-4">
               I'm a Teacher
             </h3>
-            <p style={{ color: '#6E6E6E' }}>
+            <p className="text-[#6E6E6E] text-base leading-relaxed">
               Submit answers and view live poll results in real-time.
             </p>
           </div>
         </div>
 
         {/* Continue Button */}
-        <div className="text-center">
+        <div className="flex justify-center">
           <button
             onClick={handleContinue}
-            className="px-12 py-3 rounded-full text-white font-semibold text-lg transition-all duration-200 hover:shadow-lg hover:transform hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, #7765DA 0%, #5767D0 50%, #4F0DCE 100%)',
-              boxShadow: '0 4px 15px rgba(119, 101, 218, 0.3)'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #5767D0 0%, #4F0DCE 50%, #7765DA 100%)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'linear-gradient(135deg, #7765DA 0%, #5767D0 50%, #4F0DCE 100%)';
-            }}
+            disabled={!selectedRole}
+            className="px-16 py-4 rounded-full text-white font-semibold text-lg bg-gradient-to-r from-[#7765DA] via-[#5767D0] to-[#4F0DCE] hover:from-[#6654C9] hover:via-[#4656BF] hover:to-[#3E0CBD] cursor-pointer transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             Continue
           </button>
@@ -117,4 +89,4 @@ const WelcomePage = () => {
   );
 };
 
-export default WelcomePage;
+export default Welcome;
