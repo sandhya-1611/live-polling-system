@@ -51,12 +51,18 @@ const [participants, setParticipants] = useState([]);
     <div className="min-h-screen bg-white">
       <div className="flex flex-col items-center justify-center min-h-screen px-8">
         <div className="mb-12">
-          <div className="bg-gradient-to-r from-[#7565D9] to-[#4D0ACD] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
+          <div className="bg-gradient-to-r from-[#7765D9] to-[#4D0ACD] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2">
+                     <div className="relative w-4 h-4">
+            <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 1L14.5 8.5L22 10L14.5 11.5L12 19L9.5 11.5L2 10L9.5 8.5L12 1Z"/>
+              
+              <path d="M18.5 3L19.2 6.2L22.5 7L19.2 7.8L18.5 11L17.8 7.8L14.5 7L17.8 6.2L18.5 3Z"/>
+              
+              <path d="M20.5 13L21 15.5L23.5 16L21 16.5L20.5 19L20 16.5L17.5 16L20 15.5L20.5 13Z"/>
             </svg>
-            <span>Intervue Poll</span>
           </div>
+          <span>Intervue Poll</span>
+        </div>
         </div>
 
         <div className="mb-12">
