@@ -16,6 +16,7 @@ const TeacherDashboard = ({ onBack }) => {
   const [showHistory, setShowHistory] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [showChat, setShowChat] = useState(false);
+  const [showActivePoll, setShowActivePoll] = useState(false);
   
   const currentPollQuestionRef = useRef('');
 
@@ -54,17 +55,20 @@ const TeacherDashboard = ({ onBack }) => {
     });
 
     newSocket.on('poll_results', (results) => {
-      setPollResults(results);
-      setShowResults(true);
-    });
+  console.log('Received poll results:', results); // Debug log
+  setPollResults(results);
+  setShowResults(true);
+});
 
     newSocket.on('poll_completed', (results) => {
-      setPollResults(results);
-      setShowResults(true);
-      setTimeLeft(0);
-      setCurrentPoll(null);
-      currentPollQuestionRef.current = ''; 
-    });
+  console.log('Poll completed with results:', results); // Debug log
+  setPollResults(results);
+  setShowResults(true);
+  setShowActivePoll(false); // Hide active poll, show results
+  setTimeLeft(0);
+  setCurrentPoll(null);
+  currentPollQuestionRef.current = '';
+});
 
     newSocket.on('time_update', (time) => {
       setTimeLeft(time);
@@ -123,34 +127,35 @@ const TeacherDashboard = ({ onBack }) => {
   };
 
   const handleCreatePoll = () => {
-    if (!question.trim()) {
-      alert('Please enter a question');
-      return;
-    }
+  if (!question.trim()) {
+    alert('Please enter a question');
+    return;
+  }
 
-    const validOptions = options.filter(option => option.trim() !== '');
-    if (validOptions.length < 2) {
-      alert('Please provide at least 2 options');
-      return;
-    }
+  const validOptions = options.filter(option => option.trim() !== '');
+  if (validOptions.length < 2) {
+    alert('Please provide at least 2 options');
+    return;
+  }
 
-    if (socket) {
-      const pollData = {
-        question: question.trim(),
-        options: validOptions,
-        timeLimit: timeLimit
-      };
-      
-      currentPollQuestionRef.current = question.trim();
-      
-      socket.emit('create_poll', pollData);
-      
-      setCurrentPoll(pollData);
-      setTimeLeft(timeLimit);
-      setShowResults(false);
-      setPollResults([]);
-    }
-  };
+  if (socket) {
+    const pollData = {
+      question: question.trim(),
+      options: validOptions,
+      timeLimit: timeLimit
+    };
+    
+    currentPollQuestionRef.current = question.trim();
+    
+    socket.emit('create_poll', pollData);
+    
+    setCurrentPoll(pollData);
+    setTimeLeft(timeLimit);
+    setShowResults(false);
+    setShowActivePoll(true); // Show the active poll view
+    setPollResults([]);
+  }
+};
 
   const canCreateNewPoll = !currentPoll || (currentPoll && students.every(s => s.answered));
 
@@ -467,6 +472,37 @@ const TeacherDashboard = ({ onBack }) => {
           </div>
         )}
 
+        {/* Active Poll Display - Show question while poll is running */}
+{showActivePoll && currentPoll && !showResults && !showHistory && (
+  <div>
+    <h1 className="text-3xl font-bold mb-8" style={{ color: '#373737' }}>
+      Active Poll - Time Remaining: {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+    </h1>
+    
+    <div className="bg-white rounded-lg border-2 mb-6" style={{ borderColor: '#7765DA' }}>
+      <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+        <h3 className="font-medium">{currentPoll.question}</h3>
+      </div>
+      
+      <div className="p-6 space-y-4">
+        {currentPoll.options.map((option, index) => (
+          <div key={index} className="flex items-center p-4 border rounded-lg" style={{ borderColor: '#F2F2F2', height: '60px' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-full bg-white border-2 flex items-center justify-center text-sm font-bold"
+                   style={{ color: '#7765DA', borderColor: '#7765DA' }}>
+                {index + 1}
+              </div>
+              <span className="font-medium" style={{ color: '#373737' }}>
+                {option}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
+
         {showResults && !showHistory && pollResults.length > 0 && (
           <div>
             <h1 className="text-3xl font-bold mb-8" style={{ color: '#373737' }}>
@@ -480,41 +516,37 @@ const TeacherDashboard = ({ onBack }) => {
               
               <div className="p-6 space-y-4">
                 {pollResults.map((result, index) => {
-                  const percentage = pollResults.reduce((sum, r) => sum + r.count, 0) > 0 
-                    ? (result.count / pollResults.reduce((sum, r) => sum + r.count, 0)) * 100 
-                    : 0;
-                  
-                  return (
-                    <div key={index} className="relative rounded-lg border overflow-hidden" style={{ borderColor: '#F2F2F2', height: '60px' }}>
-
-                      <div 
-                        className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
-                        style={{ 
-                          width: `${percentage}%`,
-                          background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
-                        }}
-                      ></div>
-                      
-                      {/* Content overlay */}
-                      <div className="relative z-10 flex items-center justify-between h-full px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-sm font-bold"
-                               style={{ color: '#7765DA' }}>
-                            {index + 1}
-                          </div>
-                          <span className={`font-medium ${percentage > 0 ? 'text-white' : ''}`}
-                                style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
-                            {result.option}
-                          </span>
-                        </div>
-                        <span className={`font-bold text-lg ${percentage > 0 ? 'text-white' : ''}`}
-                              style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
-                          {percentage.toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+  const totalVotes = pollResults.reduce((sum, r) => sum + (r.count || 0), 0);
+  const count = result.count || 0;
+  const percentage = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+  
+  return (
+    <div key={index} className="relative rounded-lg border overflow-hidden" style={{ borderColor: '#F2F2F2', height: '60px' }}>
+      <div 
+        className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
+        style={{ 
+          width: `${percentage}%`,
+          background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+        }}
+      ></div>
+      
+      <div className="relative z-10 flex items-center justify-between h-full px-4">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-sm font-bold"
+               style={{ color: '#7765DA' }}>
+            {index + 1}
+          </div>
+          <span className="font-medium" style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
+            {result.option}
+          </span>
+        </div>
+        <span className="font-bold text-lg text-black">
+          {percentage.toFixed(0)}%
+        </span>
+      </div>
+    </div>
+  );
+})}
               </div>
             </div>
             

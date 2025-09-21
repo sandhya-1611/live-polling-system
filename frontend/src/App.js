@@ -1,83 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Welcome from './components/Welcome';
-import TeacherDashboard from './components/TeacherDashboard';
 import StudentNameEntry from './components/StudentNameEntry';
-import StudentDashboard from './components/StudentDashboard';
 import StudentPolling from './components/StudentPolling';
-import './App.css';
+import TeacherDashboard from './components/TeacherDashboard';
+import KickedOut from './components/KickedoOut';
 
-function App() {
-  const [currentView, setCurrentView] = useState('welcome'); // 'welcome', 'teacher', 'student-name', 'student-dashboard', 'student-polling'
+const App = () => {
+  const [currentView, setCurrentView] = useState('welcome');
   const [studentName, setStudentName] = useState('');
-  const [hasActiveQuestion, setHasActiveQuestion] = useState(false);
+  const [isKickedOut, setIsKickedOut] = useState(false);
 
-  const handleRoleSelection = (role) => {
-    if (role === 'teacher') {
+  // Check if student name exists in sessionStorage on component mount
+  useEffect(() => {
+    const savedName = sessionStorage.getItem('studentName');
+    if (savedName) {
+      setStudentName(savedName);
+    }
+  }, []);
+
+  const handleRoleSelect = (role) => {
+    if (role === 'student') {
+      // Check if student name is already stored for this tab
+      setIsKickedOut(false);
+      const savedName = sessionStorage.getItem('studentName');
+      if (savedName) {
+        setStudentName(savedName);
+        setCurrentView('student-polling');
+      } else {
+        setCurrentView('student-name');
+      }
+    } else {
       setCurrentView('teacher');
-    } else if (role === 'student') {
-      setCurrentView('student-name');
     }
   };
 
-  const handleStudentNameSubmit = (name) => {
+  const handleNameSubmit = (name) => {
+    // Store student name in sessionStorage (unique to each tab)
+    sessionStorage.setItem('studentName', name);
     setStudentName(name);
-    // Always start with dashboard (waiting state)
-    // The StudentPolling component will handle the transition based on socket events
-    setCurrentView('student-dashboard');
-  };
-
-  const handleBackToWelcome = () => {
-    setCurrentView('welcome');
-    setStudentName('');
-    setHasActiveQuestion(false);
-  };
-
-  const handleQuestionReceived = () => {
-    setHasActiveQuestion(true);
     setCurrentView('student-polling');
   };
 
-  const handleQuestionEnded = () => {
-    setHasActiveQuestion(false);
-    setCurrentView('student-dashboard');
+  const handleKickedOut = () => {
+    setIsKickedOut(true);
+    setCurrentView('kicked-out');
+  };
+
+  const handleRetryAfterKick = () => {
+    setIsKickedOut(false);
+    setStudentName('');
+    sessionStorage.removeItem('studentName');
+    setCurrentView('welcome');
+  };
+
+  const handleBack = () => {
+    setCurrentView('welcome');
   };
 
   const renderCurrentView = () => {
     switch (currentView) {
       case 'welcome':
-        return <Welcome onRoleSelect={handleRoleSelection} />;
-      
-      case 'teacher':
-        return <TeacherDashboard onBack={handleBackToWelcome} />;
-      
+        return <Welcome onRoleSelect={handleRoleSelect} />;
       case 'student-name':
-        return (
-          <StudentNameEntry 
-            onNameSubmit={handleStudentNameSubmit}
-            onBack={handleBackToWelcome}
-          />
-        );
-      
-      case 'student-dashboard':
-        return (
-          <StudentDashboard 
-            studentName={studentName}
-            onQuestionReceived={handleQuestionReceived}
-            onBack={handleBackToWelcome}
-          />
-        );
-      
+        return <StudentNameEntry onNameSubmit={handleNameSubmit} onBack={handleBack} />;
       case 'student-polling':
         return (
           <StudentPolling 
-            studentName={studentName}
-            onQuestionEnded={handleQuestionEnded}
-            onBack={handleBackToWelcome}
+            studentName={studentName} 
+            onBack={handleBack} 
+            onKickedOut={handleKickedOut}
           />
         );
-      
+      case 'teacher':
+        return <TeacherDashboard onBack={handleBack} />;
+      case 'kicked-out':
+        return <KickedOut onRetry={handleRetryAfterKick} />;
       default:
-        return <Welcome onRoleSelect={handleRoleSelection} />;
+        return <Welcome onRoleSelect={handleRoleSelect} />;
     }
   };
 
@@ -86,6 +85,6 @@ function App() {
       {renderCurrentView()}
     </div>
   );
-}
+};
 
 export default App;

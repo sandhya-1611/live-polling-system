@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 
-const StudentPolling = ({ studentName, onQuestionEnded, onBack }) => {
+// Change this line at the top of StudentPolling.js:
+const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) => {
   const [socket, setSocket] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [hasAnswered, setHasAnswered] = useState(false);
@@ -38,17 +39,33 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack }) => {
     });
 
     newSocket.on('poll_results', (results) => {
-      setPollResults(results);
-      setShowResults(true);
-    });
+  console.log('Received poll results:', results); // Debug log
+  setPollResults(results);
+  setShowResults(true);
+});
 
     newSocket.on('time_update', (time) => {
       setTimeLeft(time);
     });
 
+    // In StudentPolling.js, add this to the socket event listeners useEffect:
+
+    newSocket.on('student_kicked', (data) => {
+      if (data.studentName === studentName) {
+        // Student has been kicked out
+        // Clear the student session
+        sessionStorage.removeItem('studentName');
+        // Notify parent component to show kicked out page
+        if (onKickedOut) {
+          onKickedOut();
+        }
+      }
+    });
+
     newSocket.on('poll_ended', (results) => {
-      setPollResults(results);
-      setShowResults(true);
+    console.log('Poll completed with results:', results); // Debug log
+    setPollResults(results);
+    setShowResults(true);
       setCurrentQuestion(null);
       
       // Notify parent component that question ended after showing results briefly
@@ -120,8 +137,8 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack }) => {
 
             <div className="fixed bottom-8 right-8">
               <button className="w-14 h-14 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2z"/>
                 </svg>
               </button>
             </div>
@@ -132,51 +149,58 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack }) => {
         {currentQuestion && !showResults && (
           <div className="max-w-2xl mx-auto w-full">
             {/* Question Header */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold text-black">
                   Question {currentQuestion.questionNumber || 1}
                 </h2>
                 <div className="flex items-center gap-2 text-red-500">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C10.343 2 9 3.343 9 5v1.05C6.715 6.686 5 8.771 5 11.25c0 3.45 2.8 6.25 6.25 6.25s6.25-2.8 6.25-6.25c0-2.479-1.715-4.564-4-5.2V5c0-1.657-1.343-3-3-3zm0 2c.552 0 1 .448 1 1v1.32a.5.5 0 00.352.479c1.724.517 2.898 2.089 2.898 3.95 0 2.345-1.905 4.25-4.25 4.25s-4.25-1.905-4.25-4.25c0-1.861 1.174-3.433 2.898-3.95a.5.5 0 00.352-.479V5c0-.552.448-1 1-1z"/>
+                    <circle cx="12" cy="11.25" r="1.25"/>
                   </svg>
                   <span className="font-medium">{formatTime(timeLeft)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Question Card */}
-            <div className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden mb-8 shadow-sm">
-              {/* Question Header */}
-              <div className="bg-[#6E6E6E] px-6 py-4">
+            {/* Question Card - Following Figma Design */}
+            <div className="bg-white border rounded-xl overflow-hidden mb-8" style={{ borderColor: '#B8A5E8' }}>
+              {/* Question Header with gradient */}
+              <div className="bg-gradient-to-r from-gray-800 to-gray-600 px-6 py-4">
                 <h3 className="text-white font-medium text-lg">
                   {currentQuestion.question}
                 </h3>
               </div>
 
               {/* Answer Options */}
-              <div className="p-6 space-y-3">
+              <div className="p-6 space-y-4">
                 {currentQuestion.options.map((option, index) => (
                   <label
                     key={index}
-                    className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-all duration-200 ${
                       selectedAnswer === option
                         ? 'border-[#7765DA] bg-[#7765DA]/5'
-                        : 'border-gray-200 hover:border-gray-300 bg-[#F5F5F5]'
+                        : 'border-[#F2F2F2] hover:border-[#7765DA] bg-[#F5F5F5]'
                     } ${hasAnswered ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    style={{ height: '60px', borderColor: selectedAnswer === option ? '#7765DA' : '#F2F2F2' }}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        selectedAnswer === option 
-                          ? 'border-[#7765DA] bg-[#7765DA]' 
-                          : 'border-gray-400 bg-white'
-                      }`}>
-                        {selectedAnswer === option && (
-                          <div className="w-3 h-3 bg-white rounded-full"></div>
-                        )}
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold"
+                           style={{ 
+                             background: selectedAnswer === option 
+                               ? 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' 
+                               : '#6E6E6E',
+                             color: 'white'
+                           }}>
+                        {index + 1}
                       </div>
-                      <span className="text-black font-medium text-lg">{option}</span>
+                      <span 
+                        className="font-medium text-lg"
+                        style={{ color: selectedAnswer === option ? '#000000' : '#6E6E6E' }}
+                      >
+                        {option}
+                      </span>
                     </div>
                     <input
                       type="radio"
@@ -193,7 +217,7 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack }) => {
             </div>
 
             {/* Submit Button */}
-            <div className="flex justify-center">
+            <div className="flex justify-end">
               <button
                 onClick={handleAnswerSubmit}
                 disabled={!selectedAnswer || hasAnswered}
@@ -210,62 +234,92 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack }) => {
             {/* Chat Button */}
             <div className="fixed bottom-8 right-8">
               <button className="w-14 h-14 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2z"/>
                 </svg>
               </button>
             </div>
           </div>
         )}
 
-        {/* Results Display */}
-        {showResults && pollResults.length > 0 && (
-          <div className="max-w-2xl mx-auto w-full">
-            <div className="bg-white border-2 border-gray-200 rounded-xl p-8 shadow-sm">
-              <h2 className="text-2xl font-bold text-black mb-6 text-center">Poll Results</h2>
-              
-              <div className="space-y-6">
-                {pollResults.map((result, index) => {
-                  const percentage = pollResults.reduce((sum, r) => sum + r.count, 0) > 0 
-                    ? (result.count / pollResults.reduce((sum, r) => sum + r.count, 0)) * 100 
-                    : 0;
-                  
-                  return (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-black text-lg">{result.option}</span>
-                        <span className="text-[#6E6E6E] font-medium">
-                          {result.count} votes ({percentage.toFixed(1)}%)
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-4">
-                        <div 
-                          className="bg-gradient-to-r from-[#7765DA] to-[#5767D0] h-4 rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+     {/* Results Display */}
+{showResults && pollResults.length > 0 && (
+  <div className="max-w-2xl mx-auto w-full">
+    {/* Question Header */}
+    <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center gap-3">
+        <h2 className="text-xl font-semibold text-black">
+          Question 1
+        </h2>
+        <div className="flex items-center gap-2 text-red-500">
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C10.343 2 9 3.343 9 5v1.05C6.715 6.686 5 8.771 5 11.25c0 3.45 2.8 6.25 6.25 6.25s6.25-2.8 6.25-6.25c0-2.479-1.715-4.564-4-5.2V5c0-1.657-1.343-3-3-3zm0 2c.552 0 1 .448 1 1v1.32a.5.5 0 00.352.479c1.724.517 2.898 2.089 2.898 3.95 0 2.345-1.905 4.25-4.25 4.25s-4.25-1.905-4.25-4.25c0-1.861 1.174-3.433 2.898-3.95a.5.5 0 00.352-.479V5c0-.552.448-1 1-1z"/>
+            <circle cx="12" cy="11.25" r="1.25"/>
+          </svg>
+          <span className="font-medium">{formatTime(timeLeft)}</span>
+        </div>
+      </div>
+    </div>
 
-              <div className="mt-8 pt-6 border-t-2 border-gray-200">
-                <p className="text-[#6E6E6E] text-center font-medium">
-                  Total responses: {pollResults.reduce((sum, r) => sum + r.count, 0)}
-                </p>
-              </div>
-            </div>
-
-            {/* Chat Button */}
-            <div className="fixed bottom-8 right-8">
-              <button className="w-14 h-14 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03-8 9-8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </button>
-            </div>
+    {/* Results Box - Matching Teacher Dashboard */}
+    <div className="bg-white rounded-lg border-2 mb-6" style={{ borderColor: '#7765DA' }}>
+      <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+        <h3 className="font-medium">{currentQuestion?.question}</h3>
+      </div>
+      
+      <div className="p-6 space-y-4">
+        {pollResults.map((result, index) => {
+  const totalVotes = pollResults.reduce((sum, r) => sum + (r.count || 0), 0);
+  const count = result.count || 0;
+  const percentage = totalVotes > 0 ? (count / totalVotes) * 100 : 0;
+  
+  return (
+    <div key={index} className="relative rounded-lg border overflow-hidden" style={{ borderColor: '#F2F2F2', height: '60px' }}>
+      <div 
+        className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
+        style={{ 
+          width: `${percentage}%`,
+          background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+        }}
+      ></div>
+      
+      <div className="relative z-10 flex items-center justify-between h-full px-4">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center text-sm font-bold"
+               style={{ color: '#7765DA' }}>
+            {index + 1}
           </div>
-        )}
+          <span className="font-medium" style={{ color: percentage > 0 ? 'white' : '#7765DA' }}>
+            {result.option}
+          </span>
+        </div>
+        <span className="font-bold text-lg text-black">
+          {percentage.toFixed(0)}%
+        </span>
+      </div>
+    </div>
+  );
+})}
+      </div>
+    </div>
+
+    {/* Wait Message */}
+    <div className="text-center">
+      <h2 className="text-2xl font-bold text-black">
+        Wait for the teacher to ask a new question..
+      </h2>
+    </div>
+
+    {/* Chat Button */}
+    <div className="fixed bottom-8 right-8">
+      <button className="w-14 h-14 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200">
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H8l-4 3V7a2 2 0 0 1 2-2z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );

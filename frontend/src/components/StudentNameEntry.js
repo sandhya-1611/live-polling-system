@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 const StudentNameEntry = ({ onNameSubmit, onBack }) => {
-  const [name, setName] = useState('Rahul Bajaj');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -45,6 +45,12 @@ const StudentNameEntry = ({ onNameSubmit, onBack }) => {
     }
   };
 
+  const handleKeyPress = (e) => {
+  if (e.key === 'Enter') {
+    handleSubmit(e);
+  }
+};
+
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-2xl mx-auto px-8 py-12 flex flex-col justify-center min-h-screen">
@@ -78,6 +84,7 @@ const StudentNameEntry = ({ onNameSubmit, onBack }) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onKeyPress={handleKeyPress}  // Add this line
                 className="w-full p-4 bg-[#F5F5F5] rounded-xl border-0 focus:outline-none focus:ring-2 focus:ring-[#7765DA] text-black text-lg text-center"
                 placeholder="Enter your name"
                 disabled={isLoading}
