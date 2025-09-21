@@ -577,26 +577,22 @@ const TeacherDashboard = ({ onBack }) => {
         <div className="fixed bottom-24 right-6 w-80 bg-white rounded-xl border shadow-lg p-6" style={{ borderColor: '#F2F2F2' }}>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold" style={{ color: '#373737' }}>Participants</h3>
-            <span className="text-sm" style={{ color: '#6E6E6E' }}>
+            {/* <span className="text-sm" style={{ color: '#6E6E6E' }}>
               {students.length} users
-            </span>
+            </span> */}
           </div>
           
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="font-semibold" style={{ color: '#373737' }}>Name</span>
-              <span className="font-semibold" style={{ color: '#373737' }}>Action</span>
+              <span className="font-semibold" style={{ color: '#6E6E6E' }}>Name</span>
+              <span className="font-semibold" style={{ color: '#6E6E6E' }}>Action</span>
             </div>
             
             {students.map((student, index) => (
               <div key={`${student.name}-${index}`} className="flex justify-between items-center py-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                       style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}>
-                    {student.name.charAt(0).toUpperCase()}
-                  </div>
                   <div className="flex flex-col">
-                    <span style={{ color: '#373737' }}>{student.name}</span>
+                    <span className={`font-semibold text-lg  'text-gray-500'`}>{student.name}</span>
                     {currentPoll && (
                       <span className="text-xs" style={{ color: student.answered ? '#22C55E' : '#EF4444' }}>
                         {student.answered ? 'Answered' : 'Not answered'}
@@ -605,8 +601,8 @@ const TeacherDashboard = ({ onBack }) => {
                   </div>
                 </div>
                 <button 
-                  className="text-sm font-medium"
-                  style={{ color: '#7765DA' }}
+                  className="text-sm font-medium underline"
+                  style={{ color: '#1D68BD' }}
                   onClick={() => {
                     if (socket) {
                       socket.emit('remove_student', student.name);
