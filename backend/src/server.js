@@ -35,7 +35,7 @@ io.on('connection', (socket) => {
       console.log(`Student ${data.name} joined. Total students: ${students.length}`);
       
       io.to('teachers').emit('student_joined', { name: data.name });
-
+      broadcastParticipants();
       if (currentPoll) {
         socket.emit('new_question', currentPoll);
       }
@@ -86,6 +86,7 @@ io.on('connection', (socket) => {
         io.to('teachers').emit('student_removed', { studentName });
         
         console.log(`Student ${studentName} has been kicked out`);
+        broadcastParticipants();
       }
     }
   });
@@ -130,6 +131,7 @@ io.on('connection', (socket) => {
       console.log(`Student ${studentName} disconnected. Remaining: ${students.length}`);
 
       io.to('teachers').emit('student_left', { studentName });
+       broadcastParticipants();
     }
   });
 });
@@ -200,6 +202,11 @@ function endPoll() {
   currentPoll = null;
 
   students = students.map(s => ({ ...s, answered: false, answer: null }));
+}
+
+function broadcastParticipants() {
+  const participantNames = students.map(s => s.name);
+  io.emit('participants_update', participantNames);
 }
 
 const PORT = process.env.PORT || 5000;

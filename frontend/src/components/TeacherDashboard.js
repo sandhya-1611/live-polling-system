@@ -368,7 +368,7 @@ const TeacherDashboard = ({ onBack }) => {
                   {options.map((option, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
-                           style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}>
+                           style={{ background: 'linear-gradient(135deg, #8F64E1 0%, #4E377B 100%)' }}>
                         {index + 1}
                       </div>
                       <input
