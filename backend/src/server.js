@@ -120,6 +120,17 @@ io.on('connection', (socket) => {
     }
   });
 
+    socket.on('send_chat_message', (messageData) => {
+      console.log('Chat message received:', messageData);
+      
+      io.emit('chat_message', messageData);
+    });
+
+    socket.on('get_chat_history', () => {
+      
+      socket.emit('chat_history', []);
+    });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     

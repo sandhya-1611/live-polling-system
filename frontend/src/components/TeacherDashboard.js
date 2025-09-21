@@ -17,6 +17,9 @@ const TeacherDashboard = ({ onBack }) => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [showChat, setShowChat] = useState(false);
   const [showActivePoll, setShowActivePoll] = useState(false);
+  const [activeTab, setActiveTab] = useState('participants'); 
+const [chatMessages, setChatMessages] = useState([]);
+const [newMessage, setNewMessage] = useState('');
   
   const currentPollQuestionRef = useRef('');
 
@@ -87,6 +90,9 @@ const TeacherDashboard = ({ onBack }) => {
     newSocket.on('student_removed', (data) => {
       setStudents(prev => prev.filter(s => s.name !== data.studentName));
     });
+    newSocket.on('chat_message', (messageData) => {
+    setChatMessages(prev => [...prev, messageData]);
+  });
 
     newSocket.on('time_update', (time) => {
       setTimeLeft(time);
@@ -156,6 +162,28 @@ const TeacherDashboard = ({ onBack }) => {
     }
   };
 
+  const handleSendMessage = () => {
+  if (newMessage.trim() && socket) {
+    const messageData = {
+      id: Date.now(),
+      text: newMessage.trim(),
+      sender: 'Teacher',
+      timestamp: new Date(),
+      senderType: 'teacher'
+    };
+
+    socket.emit('send_chat_message', messageData);
+    setNewMessage('');
+  }
+};
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   const handleAskNewQuestion = () => {
     setShowResults(false);
     setShowHistory(false);
@@ -191,11 +219,18 @@ const TeacherDashboard = ({ onBack }) => {
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white" 
-                   style={{ background: 'linear-gradient(135deg, #7565D9 0%, #4D0ACD 100%)' }}>
-                <span className="w-2 h-2 bg-white rounded-full mr-2"></span>
-                Intervue Poll
-              </div>
+              <div className="bg-gradient-to-r from-[#7765D9] to-[#4D0ACD] text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2">
+           <div className="relative w-4 h-4">
+            <svg className="w-full h-full" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 1L14.5 8.5L22 10L14.5 11.5L12 19L9.5 11.5L2 10L9.5 8.5L12 1Z"/>
+              
+              <path d="M18.5 3L19.2 6.2L22.5 7L19.2 7.8L18.5 11L17.8 7.8L14.5 7L17.8 6.2L18.5 3Z"/>
+              
+              <path d="M20.5 13L21 15.5L23.5 16L21 16.5L20.5 19L20 16.5L17.5 16L20 15.5L20.5 13Z"/>
+            </svg>
+          </div>
+          <span>Intervue Poll</span>
+        </div>
             </div>
             {(showResults || showHistory || pollHistory.length > 0) && (
               <button
@@ -268,7 +303,7 @@ const TeacherDashboard = ({ onBack }) => {
                                        style={{ color: '#7765DA' }}>
                                     {resultIndex + 1}
                                   </div>
-                                  <span className={`font-medium  ${percentage > 20 ? 'text-white' : 'text-gray-700'}`}>
+                                  <span className={`font-medium  ${percentage > 0 ? 'text-white' : 'text-gray-700'}`}>
                                     {result.option}
                                   </span>
                                 </div>
@@ -539,7 +574,7 @@ const TeacherDashboard = ({ onBack }) => {
                                style={{ color: '#7765DA' }}>
                             {index + 1}
                           </div>
-                          <span className={`font-medium ${percentage > 20 ? 'text-white' : 'text-gray-700'}`}>
+                          <span className={`font-medium ${percentage > 0 ? 'text-white' : 'text-gray-700'}`}>
                             {result.option}
                           </span>
                         </div>
@@ -581,51 +616,133 @@ const TeacherDashboard = ({ onBack }) => {
       )}
 
       {showChat && (
-        <div className="fixed bottom-24 right-6 w-80 bg-white rounded-xl border shadow-lg p-6" style={{ borderColor: '#F2F2F2' }}>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-semibold" style={{ color: '#373737' }}>Participants</h3>
-          </div>
-          
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="font-semibold" style={{ color: '#6E6E6E' }}>Name</span>
-              <span className="font-semibold" style={{ color: '#6E6E6E' }}>Action</span>
-            </div>
-            
-            {students.map((student, index) => (
-              <div key={`${student.name}-${index}`} className="flex justify-between items-center py-2">
-                <div className="flex items-center gap-3">
-                  <div className="flex flex-col">
-                    <span className={`font-semibold text-md  'text-gray-500'`}>{student.name}</span>
-                    {currentPoll && (
-                      <span className="text-xs" style={{ color: student.answered ? '#22C55E' : '#EF4444' }}>
-                        {student.answered ? 'Answered' : 'Not answered'}
+      <div className="fixed bottom-24 right-6 w-80 bg-white rounded-xl border shadow-lg" style={{ borderColor: '#F2F2F2' }}>
+        <div className="flex border-b" style={{ borderColor: '#F2F2F2' }}>
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`flex-1 px-6 py-4 text-sm font-medium relative ${
+              activeTab === 'chat' ? 'text-[#292929]' : 'text-[#292929] font-bold'
+            }`}
+          >
+            Chat
+            {activeTab === 'chat' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7765DA]"></div>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('participants')}
+            className={`flex-1 px-6 py-4 text-sm font-medium relative ${
+              activeTab === 'participants' ? 'text-[#292929]' : 'text-[#292929] font-bold'
+            }`}
+          >
+            Participants
+            {activeTab === 'participants' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#7765DA]"></div>
+            )}
+          </button>
+        </div>
+
+        {activeTab === 'chat' && (
+          <div className="flex flex-col h-80">
+            <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+              {chatMessages.map((message, index) => (
+                <div key={message.id} className="flex flex-col">
+                  <div className={`flex ${message.senderType === 'teacher' ? 'justify-end' : 'justify-start'}`}>
+                    <div className="flex flex-col max-w-xs">
+                      <span className={`text-xs font-medium mb-1 ${
+                        message.senderType === 'teacher' ? 'text-right text-[#7765DA]' : 'text-left text-[#373737]'
+                      }`}>
+                        {message.sender}
                       </span>
-                    )}
+                      <div className={`px-3 py-2 rounded-lg text-sm ${
+                        message.senderType === 'teacher' 
+                          ? 'bg-[#7765DA] text-white' 
+                          : 'bg-[#373737] text-white'
+                      }`}>
+                        {message.text}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <button 
-                  className="text-sm font-medium underline"
-                  style={{ color: '#1D68BD' }}
-                  onClick={() => {
-                    if (socket) {
-                      socket.emit('remove_student', student.name);
-                    }
-                  }}
+              ))}
+              {chatMessages.length === 0 && (
+                <p className="text-center text-sm text-[#6E6E6E] mt-8">
+                  No messages yet. Start the conversation!
+                </p>
+              )}
+            </div>
+
+            <div className="p-4 border-t" style={{ borderColor: '#F2F2F2' }}>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Type your message..."
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#7765DA]"
+                  style={{ borderColor: '#F2F2F2' }}
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!newMessage.trim()}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                    newMessage.trim() 
+                      ? 'bg-[#7765DA] text-white hover:bg-[#6654C9]' 
+                      : 'bg-[#6E6E6E] text-white cursor-not-allowed'
+                  }`}
                 >
-                  Kick out
+                  Send
                 </button>
               </div>
-            ))}
-            
-            {students.length === 0 && (
-              <p className="text-center text-sm" style={{ color: '#6E6E6E' }}>
-                No students connected yet
-              </p>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {activeTab === 'participants' && (
+          <div className="p-6">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="font-semibold" style={{ color: '#6E6E6E' }}>Name</span>
+                <span className="font-semibold" style={{ color: '#6E6E6E' }}>Action</span>
+              </div>
+              
+              {students.map((student, index) => (
+                <div key={`${student.name}-${index}`} className="flex justify-between items-center py-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-md text-gray-700">{student.name}</span>
+                      {currentPoll && (
+                        <span className="text-xs" style={{ color: student.answered ? '#22C55E' : '#EF4444' }}>
+                          {student.answered ? 'Answered' : 'Not answered'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button 
+                    className="text-sm font-medium underline"
+                    style={{ color: '#1D68BD' }}
+                    onClick={() => {
+                      if (socket) {
+                        socket.emit('remove_student', student.name);
+                      }
+                    }}
+                  >
+                    Kick out
+                  </button>
+                </div>
+              ))}
+              
+              {students.length === 0 && (
+                <p className="text-center text-sm" style={{ color: '#6E6E6E' }}>
+                  No students connected yet
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
     </div>
   );
 };
