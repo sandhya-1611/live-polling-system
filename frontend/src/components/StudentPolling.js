@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
 
-// Change this line at the top of StudentPolling.js:
 const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) => {
   const [socket, setSocket] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -13,14 +12,11 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
   const [isConnected, setIsConnected] = useState(true);
 
   useEffect(() => {
-    // Initialize socket connection
     const newSocket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000');
     setSocket(newSocket);
 
-    // Join as student
     newSocket.emit('join', { role: 'student', name: studentName });
 
-    // Socket event listeners
     newSocket.on('connect', () => {
       setIsConnected(true);
     });
@@ -39,7 +35,7 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
     });
 
     newSocket.on('poll_results', (results) => {
-  console.log('Received poll results:', results); // Debug log
+  console.log('Received poll results:', results); 
   setPollResults(results);
   setShowResults(true);
 });
@@ -48,35 +44,27 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
       setTimeLeft(time);
     });
 
-    // In StudentPolling.js, add this to the socket event listeners useEffect:
-
-    newSocket.on('student_kicked', (data) => {
-      if (data.studentName === studentName) {
-        // Student has been kicked out
-        // Clear the student session
-        sessionStorage.removeItem('studentName');
-        // Notify parent component to show kicked out page
-        if (onKickedOut) {
-          onKickedOut();
-        }
-      }
-    });
+newSocket.on('student_kicked', (data) => {
+  console.log('Student has been kicked out');
+  sessionStorage.removeItem('studentName');
+  if (onKickedOut) {
+    onKickedOut();
+  }
+});
 
     newSocket.on('poll_ended', (results) => {
-    console.log('Poll completed with results:', results); // Debug log
+    console.log('Poll completed with results:', results); 
     setPollResults(results);
     setShowResults(true);
       setCurrentQuestion(null);
       
-      // Notify parent component that question ended after showing results briefly
       setTimeout(() => {
         if (onQuestionEnded) {
           onQuestionEnded();
         }
-      }, 5000); // Show results for 5 seconds before going back to dashboard
+      }, 5000);
     });
 
-    // Cleanup on unmount
     return () => {
       newSocket.disconnect();
     };
@@ -113,7 +101,6 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-2xl mx-auto px-8 py-12 flex flex-col justify-center min-h-screen">
-        {/* Waiting State */}
         {!currentQuestion && !showResults && (
           <div className="flex flex-col items-center justify-center">
             <div className="mb-12">
@@ -145,10 +132,8 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
           </div>
         )}
 
-        {/* Active Question */}
         {currentQuestion && !showResults && (
           <div className="max-w-2xl mx-auto w-full">
-            {/* Question Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold text-black">
@@ -164,16 +149,13 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
               </div>
             </div>
 
-            {/* Question Card - Following Figma Design */}
             <div className="bg-white border rounded-xl overflow-hidden mb-8" style={{ borderColor: '#B8A5E8' }}>
-              {/* Question Header with gradient */}
               <div className="bg-gradient-to-r from-gray-800 to-gray-600 px-6 py-4">
                 <h3 className="text-white font-medium text-lg">
                   {currentQuestion.question}
                 </h3>
               </div>
 
-              {/* Answer Options */}
               <div className="p-6 space-y-4">
                 {currentQuestion.options.map((option, index) => (
                   <label
@@ -216,7 +198,6 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
               </div>
             </div>
 
-            {/* Submit Button */}
             <div className="flex justify-end">
               <button
                 onClick={handleAnswerSubmit}
@@ -231,7 +212,6 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
               </button>
             </div>
 
-            {/* Chat Button */}
             <div className="fixed bottom-8 right-8">
               <button className="w-14 h-14 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -242,10 +222,8 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
           </div>
         )}
 
-     {/* Results Display */}
 {showResults && pollResults.length > 0 && (
   <div className="max-w-2xl mx-auto w-full">
-    {/* Question Header */}
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-3">
         <h2 className="text-xl font-semibold text-black">
@@ -261,7 +239,6 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
       </div>
     </div>
 
-    {/* Results Box - Matching Teacher Dashboard */}
     <div className="bg-white rounded-lg border-2 mb-6" style={{ borderColor: '#7765DA' }}>
       <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
         <h3 className="font-medium">{currentQuestion?.question}</h3>
@@ -303,14 +280,12 @@ const StudentPolling = ({ studentName, onQuestionEnded, onBack, onKickedOut }) =
       </div>
     </div>
 
-    {/* Wait Message */}
     <div className="text-center">
       <h2 className="text-2xl font-bold text-black">
         Wait for the teacher to ask a new question..
       </h2>
     </div>
 
-    {/* Chat Button */}
     <div className="fixed bottom-8 right-8">
       <button className="w-14 h-14 bg-gradient-to-r from-[#7765DA] to-[#5767D0] rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200">
         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">

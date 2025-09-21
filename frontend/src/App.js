@@ -3,14 +3,13 @@ import Welcome from './components/Welcome';
 import StudentNameEntry from './components/StudentNameEntry';
 import StudentPolling from './components/StudentPolling';
 import TeacherDashboard from './components/TeacherDashboard';
-import KickedOut from './components/KickedoOut';
+import KickedOut from './components/KickedOut';
 
 const App = () => {
   const [currentView, setCurrentView] = useState('welcome');
   const [studentName, setStudentName] = useState('');
   const [isKickedOut, setIsKickedOut] = useState(false);
 
-  // Check if student name exists in sessionStorage on component mount
   useEffect(() => {
     const savedName = sessionStorage.getItem('studentName');
     if (savedName) {
@@ -20,7 +19,6 @@ const App = () => {
 
   const handleRoleSelect = (role) => {
     if (role === 'student') {
-      // Check if student name is already stored for this tab
       setIsKickedOut(false);
       const savedName = sessionStorage.getItem('studentName');
       if (savedName) {
@@ -35,7 +33,6 @@ const App = () => {
   };
 
   const handleNameSubmit = (name) => {
-    // Store student name in sessionStorage (unique to each tab)
     sessionStorage.setItem('studentName', name);
     setStudentName(name);
     setCurrentView('student-polling');
