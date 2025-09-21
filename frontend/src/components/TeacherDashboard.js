@@ -192,9 +192,9 @@ const TeacherDashboard = ({ onBack }) => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
               <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white" 
-                   style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}>
+                   style={{ background: 'linear-gradient(135deg, #7565D9 0%, #4D0ACD 100%)' }}>
                 <span className="w-2 h-2 bg-white rounded-full mr-2"></span>
-                Interval Poll
+                Intervue Poll
               </div>
             </div>
             {(showResults || showHistory || pollHistory.length > 0) && (
@@ -208,7 +208,7 @@ const TeacherDashboard = ({ onBack }) => {
                   }
                 }}
                 className="flex items-center gap-2 px-4 py-2 text-white rounded-full font-medium"
-                style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
+                style={{ background: 'linear-gradient(135deg,  #8F64E1 100%)' }}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
@@ -224,7 +224,8 @@ const TeacherDashboard = ({ onBack }) => {
         {showHistory && (
           <div>
             <h1 className="text-3xl font-bold mb-8" style={{ color: '#373737' }}>
-              View Poll History
+              <span className="font-semibold">View </span>
+            <span className="font-bold"> Poll History</span>
             </h1>
             
             {pollHistory.length === 0 ? (
@@ -236,12 +237,12 @@ const TeacherDashboard = ({ onBack }) => {
               <div className="space-y-8">
                 {pollHistory.map((poll, index) => (
                   <div key={poll.id}>
-                    <h2 className="text-xl font-semibold mb-4" style={{ color: '#373737' }}>
+                    <h2 className="text-xl font-bold mb-4" style={{ color: '#373737' }}>
                       Question {index + 1}
                     </h2>
                     
                     <div className="bg-white rounded-lg border-2" style={{ borderColor: '#7765DA' }}>
-                      <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+                      <div className="bg-gradient-to-r from-[#343434] to-[#6E6E6E] text-white p-4 rounded-t-lg">
                         <h3 className="font-medium">{poll.question}</h3>
                       </div>
                       
@@ -257,7 +258,7 @@ const TeacherDashboard = ({ onBack }) => {
                                 className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
                                 style={{ 
                                   width: `${percentage}%`,
-                                  background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+                                  background: 'linear-gradient(135deg,  #6766D5 100%)'
                                 }}
                               ></div>
                               
@@ -288,8 +289,7 @@ const TeacherDashboard = ({ onBack }) => {
                 <div className="flex justify-end mt-8">
                   <button
                     onClick={handleAskNewQuestion}
-                    className="px-8 py-4 text-white font-semibold rounded-full"
-                    style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
+                    className="px-8 py-4 text-white font-semibold rounded-full bg-gradient-to-r from-[#7765DA] to-[#5767D0]  hover:from-[#6654C9] hover:to-[#4656BF] "
                   >
                     + Ask a new question
                   </button>
@@ -302,9 +302,11 @@ const TeacherDashboard = ({ onBack }) => {
         {!currentPoll && !showResults && !showHistory && (
           <div>
             <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-3" style={{ color: '#373737' }}>
-                Let's Get Started
-              </h1>
+              <div className="mb-2">
+                <span className="text-4xl font-semibold">Let's </span>
+              <span className=" text-4xl font-bold">Get Started</span>
+            </div> 
+
               <p style={{ color: '#6E6E6E' }}>
                 you'll have the ability to create and manage polls, ask questions, and monitor 
                 your students' responses in real-time.
@@ -313,20 +315,27 @@ const TeacherDashboard = ({ onBack }) => {
 
             <div className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <label className="text-lg font-semibold" style={{ color: '#373737' }}>
+                <label className="text-lg font-bold" style={{ color: '#373737' }}>
                   Enter your question
                 </label>
-                <select
-                  value={timeLimit}
-                  onChange={(e) => setTimeLimit(Number(e.target.value))}
-                  className="px-4 py-2 border rounded-lg"
-                  style={{ borderColor: '#F2F2F2', color: '#373737', backgroundColor: 'white' }}
-                >
-                  <option value={10}>10 seconds</option>
-                  <option value={20}>20 seconds</option>
-                  <option value={30}>30 seconds</option>
-                  <option value={60}>60 seconds</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={timeLimit}
+                    onChange={(e) => setTimeLimit(Number(e.target.value))}
+                    className="px-4 py-2 pr-10 border rounded-lg appearance-none cursor-pointer"
+                    style={{ borderColor: '#F2F2F2', color: '#000000', backgroundColor: 'white' }}
+                  >
+                    <option value={10}>10 seconds</option>
+                    <option value={20}>20 seconds</option>
+                    <option value={30}>30 seconds</option>
+                    <option value={60}>60 seconds</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg width="17" height="30" viewBox="0 0 12 8" fill="none">
+                      <path d="M1 1L6 7L11 1H1Z" fill="#480FB3"/>
+                    </svg>
+                  </div>
+                </div>
               </div>
               
               <div className="relative">
@@ -342,8 +351,8 @@ const TeacherDashboard = ({ onBack }) => {
                   rows={4}
                 />
                 <div className="absolute bottom-4 right-4 flex items-center gap-2">
-                  <span className="text-sm px-3 py-1 rounded-full text-white"
-                        style={{ backgroundColor: '#6E6E6E' }}>
+                  <span className="text-sm px-3 py-1  text-black"
+                        >
                     {question.length}/100
                   </span>
                 </div>
@@ -352,7 +361,7 @@ const TeacherDashboard = ({ onBack }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-lg font-semibold mb-4" style={{ color: '#373737' }}>
+                <h3 className="text-lg font-bold mb-4" style={{ color: '#373737' }}>
                   Edit Options
                 </h3>
                 <div className="space-y-3">
@@ -401,7 +410,7 @@ const TeacherDashboard = ({ onBack }) => {
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4" style={{ color: '#373737' }}>
+                <h3 className="text-lg font-bold mb-4" style={{ color: '#373737' }}>
                   Is it Correct?
                 </h3>
                 <div className="space-y-3">
@@ -452,12 +461,8 @@ const TeacherDashboard = ({ onBack }) => {
               <button
                 onClick={handleCreatePoll}
                 disabled={!canCreateNewPoll}
-                className="px-8 py-3 text-white font-semibold rounded-full transition-all"
-                style={{ 
-                  background: canCreateNewPoll 
-                    ? 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' 
-                    : '#6E6E6E'
-                }}
+                className="px-8 py-3 text-white font-semibold rounded-full transition-all bg-gradient-to-r from-[#7765DA] to-[#5767D0]  hover:from-[#6654C9] hover:to-[#4656BF] "
+                
               >
                 Ask Question
               </button>
@@ -472,7 +477,7 @@ const TeacherDashboard = ({ onBack }) => {
             </h1>
             
             <div className="bg-white rounded-lg border-2 mb-6" style={{ borderColor: '#7765DA' }}>
-              <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+              <div className="bg-gradient-to-r from-[#343434] to-[#6E6E6E] text-white p-4 rounded-t-lg">
                 <h3 className="font-medium">{currentPoll.question}</h3>
               </div>
               
@@ -504,11 +509,11 @@ const TeacherDashboard = ({ onBack }) => {
         {showResults && !showHistory && pollResults.length > 0 && (
           <div>
             <h1 className="text-3xl font-bold mb-8" style={{ color: '#373737' }}>
-              Poll Results
+              Question
             </h1>
             
             <div className="bg-white rounded-lg border-2 mb-6" style={{ borderColor: '#7765DA' }}>
-              <div className="bg-gradient-to-r from-gray-800 to-gray-600 text-white p-4 rounded-t-lg">
+              <div className="bg-gradient-to-r from-[#343434] to-[#6E6E6E] text-white p-4 rounded-t-lg">
                 <h3 className="font-medium">{currentPollQuestionRef.current || question}</h3>
               </div>
               
@@ -524,7 +529,7 @@ const TeacherDashboard = ({ onBack }) => {
                         className="absolute left-0 top-0 h-full transition-all duration-1000 ease-out"
                         style={{ 
                           width: `${percentage}%`,
-                          background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)'
+                          background: 'linear-gradient(135deg,  #6766D5 100%)'
                         }}
                       ></div>
                       
@@ -553,8 +558,8 @@ const TeacherDashboard = ({ onBack }) => {
             <div className="flex justify-end">
               <button
                 onClick={handleAskNewQuestion}
-                className="px-8 py-4 text-white font-semibold rounded-full"
-                style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
+                className="px-8 py-4 text-white font-semibold rounded-full bg-gradient-to-r from-[#7765DA] to-[#5767D0]  hover:from-[#6654C9] hover:to-[#4656BF] "
+                
               >
                 + Ask a new question
               </button>
@@ -563,23 +568,22 @@ const TeacherDashboard = ({ onBack }) => {
         )}
       </div>
 
+      {(currentPoll || showResults || showHistory || showActivePoll) && (
       <button
         onClick={() => setShowChat(!showChat)}
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg"
-        style={{ background: 'linear-gradient(135deg, #7765DA 0%, #4F0DCE 100%)' }}
+        style={{ background: 'linear-gradient(135deg,  #5A66D1 100%)' }}
       >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v3c0 .6.4 1 1 1 .2 0 .5-.1.7-.3L14.6 18H20c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
         </svg>
       </button>
+      )}
 
       {showChat && (
         <div className="fixed bottom-24 right-6 w-80 bg-white rounded-xl border shadow-lg p-6" style={{ borderColor: '#F2F2F2' }}>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-semibold" style={{ color: '#373737' }}>Participants</h3>
-            {/* <span className="text-sm" style={{ color: '#6E6E6E' }}>
-              {students.length} users
-            </span> */}
           </div>
           
           <div className="space-y-3">
@@ -592,7 +596,7 @@ const TeacherDashboard = ({ onBack }) => {
               <div key={`${student.name}-${index}`} className="flex justify-between items-center py-2">
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col">
-                    <span className={`font-semibold text-lg  'text-gray-500'`}>{student.name}</span>
+                    <span className={`font-semibold text-md  'text-gray-500'`}>{student.name}</span>
                     {currentPoll && (
                       <span className="text-xs" style={{ color: student.answered ? '#22C55E' : '#EF4444' }}>
                         {student.answered ? 'Answered' : 'Not answered'}
